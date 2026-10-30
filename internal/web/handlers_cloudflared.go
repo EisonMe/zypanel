@@ -367,7 +367,7 @@ func (s *Server) handleCloudflaredRemove(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, "/cloudflared?err=backup-failed", http.StatusSeeOther)
 		return
 	}
-	if err := atomicWrite(s.CloudflaredConfig, []byte(strings.Join(out, "\n")), mode); err != nil {
+	if err := atomicWrite(s.CloudflaredConfig, []byte(out), mode); err != nil {
 		s.record(r, "cloudflared.remove", host, false, err.Error())
 		http.Redirect(w, r, "/cloudflared?err=write-failed", http.StatusSeeOther)
 		return

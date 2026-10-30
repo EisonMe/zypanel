@@ -343,7 +343,8 @@ func (s *Server) handleCloudflaredAdd(w http.ResponseWriter, r *http.Request) {
 		detail += "; " + restartDetail
 		s.restoreIngress(text, mode)
 	}
-	s.record(r, "cloudflared.add", host, ok, detail)	if ok {
+	s.record(r, "cloudflared.add", host, ok, detail)
+	if ok {
 		http.Redirect(w, r, "/cloudflared?ok=rule-added", http.StatusSeeOther)
 		return
 	}

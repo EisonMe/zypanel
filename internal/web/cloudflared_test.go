@@ -78,3 +78,38 @@ func TestRemoveIngressRuleOnlyFirstMatch(t *testing.T) {
 		t.Fatalf("expected exactly one duplicate left:\n%s", out)
 	}
 }
+
+// A rule inserted with a different indentation than the rest of the file makes
+// the YAML invalid, so cloudflared refuses to start.
+func TestInsertIngressRuleMatchesExistingIndent(t *testing.T) {
+	out, ok := insertIngressRule(sampleIngress, "c.example.com", "http://127.0.0.1:8003")
+	if !ok {
+		t.Fatal("expected insertion to succeed")
+	}
+	if !strings.Contains(out, "\n- hostname: c.example.com\n  service: http://127.0.0.1:8003\n") {
+		t.Fatalf("rule was not inserted flush with the other rules:\n%s", out)
+	}
+	if strings.Contains(out, "  - hostname: c.example.com") {
+		t.Fatalf("rule was inserted with a mismatched indent:\n%s", out)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(out), "- service: http_status:404") {
+		t.Fatalf("catch-all is no longer last:\n%s", out)
+	}
+}
+
+func TestInsertIngressRuleKeepsTwoSpaceIndent(t *testing.T) {
+	indented := "tunnel: t\ncredentials-file: /c.json\ningress:\n  - hostname: a.example.com\n    service: http://127.0.0.1:1\n  - service: http_status:404\n"
+	out, ok := insertIngressRule(indented, "b.example.com", "http://127.0.0.1:2")
+	if !ok {
+		t.Fatal("expected insertion to succeed")
+	}
+	if !strings.Contains(out, "  - hostname: b.example.com\n    service: http://127.0.0.1:2\n") {
+		t.Fatalf("indent was not preserved:\n%s", out)
+	}
+}
+
+func TestInsertIngressRuleWithoutCatchAllFails(t *testing.T) {
+	if _, ok := insertIngressRule("tunnel: t\ningress:\n- hostname: a.example.com\n  service: http://127.0.0.1:1\n", "b.example.com", "http://127.0.0.1:2"); ok {
+		t.Fatal("expected failure when no catch-all rule exists")
+	}
+}

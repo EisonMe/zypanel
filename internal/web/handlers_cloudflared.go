@@ -163,6 +163,35 @@ func (s *Server) restoreIngress(previous string, mode os.FileMode) {
 	}
 }
 
+// insertIngressRule adds a hostname rule just above the catch-all entry,
+// reusing whatever indentation the file already uses. Mixing indentation
+// styles produces invalid YAML, which cloudflared then refuses to load.
+func insertIngressRule(text, host, target string) (string, bool) {
+	lines := strings.Split(text, "\n")
+	insertAt := -1
+	for i, line := range lines {
+		if strings.Contains(strings.TrimSpace(line), "http_status:404") {
+			insertAt = i
+		}
+	}
+	if insertAt < 0 {
+		return "", false
+	}
+
+	line := lines[insertAt]
+	indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+	block := []string{
+		indent + "- hostname: " + host,
+		indent + "  service: " + target,
+	}
+
+	out := make([]string, 0, len(lines)+len(block))
+	out = append(out, lines[:insertAt]...)
+	out = append(out, block...)
+	out = append(out, lines[insertAt:]...)
+	return strings.Join(out, "\n"), true
+}
+
 func (s *Server) handleCloudflared(w http.ResponseWriter, r *http.Request) {
 	page := cfPage{
 		BaseData:   withFlash(s.base(r, "Cloudflared"), r),
@@ -277,27 +306,11 @@ func (s *Server) handleCloudflaredAdd(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	lines := strings.Split(text, "\n")
-	insertAt := -1
-	for i, line := range lines {
-		if strings.Contains(strings.TrimSpace(line), "http_status:404") {
-			insertAt = i
-		}
-	}
-	if insertAt < 0 {
+	newText, ok := insertIngressRule(text, host, target)
+	if !ok {
 		http.Redirect(w, r, "/cloudflared?err=catchall-not-found", http.StatusSeeOther)
 		return
 	}
-
-	block := []string{
-		"  - hostname: " + host,
-		"    service: " + target,
-	}
-	newLines := make([]string, 0, len(lines)+len(block))
-	newLines = append(newLines, lines[:insertAt]...)
-	newLines = append(newLines, block...)
-	newLines = append(newLines, lines[insertAt:]...)
-	newText := strings.Join(newLines, "\n")
 
 	info, err := os.Stat(s.CloudflaredConfig)
 	mode := os.FileMode(0o644)
@@ -330,8 +343,7 @@ func (s *Server) handleCloudflaredAdd(w http.ResponseWriter, r *http.Request) {
 		detail += "; " + restartDetail
 		s.restoreIngress(text, mode)
 	}
-	s.record(r, "cloudflared.add", host, ok, detail)
-	if ok {
+	s.record(r, "cloudflared.add", host, ok, detail)	if ok {
 		http.Redirect(w, r, "/cloudflared?ok=rule-added", http.StatusSeeOther)
 		return
 	}

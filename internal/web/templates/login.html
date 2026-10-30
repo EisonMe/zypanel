@@ -1,0 +1,21 @@
+{{define "content"}}
+<div class="auth-card">
+  <div class="auth-head">
+    <span class="brand-mark big">Z</span>
+    <h2>ZyPanel</h2>
+    <p>服务器控制台</p>
+  </div>
+  {{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+  <form method="post" action="/login" class="stack">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>用户名
+      <input type="text" name="username" autocomplete="username" required autofocus>
+    </label>
+    <label>密码
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button class="primary" type="submit">登录</button>
+  </form>
+  <p class="muted small">ZyPanel {{.Version}}</p>
+</div>
+{{end}}

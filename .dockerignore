@@ -1,0 +1,10 @@
+.git
+.github
+.gitignore
+.env
+.env.local
+data
+logs
+dist
+*.jsonl
+README.md

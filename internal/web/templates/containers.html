@@ -1,0 +1,56 @@
+{{define "content"}}
+<section class="card">
+  <div class="card-head">
+    <h3>容器 <span class="muted">({{.Total}})</span></h3>
+    <div class="row">
+      <span class="badge ok">{{.Running}} 运行中</span>
+      <span class="badge">{{.Stopped}} 已停止</span>
+    </div>
+  </div>
+
+  {{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+
+  {{if .Items}}
+  <table>
+    <thead>
+      <tr><th>名称</th><th>镜像</th><th>状态</th><th>端口</th><th class="right">操作</th></tr>
+    </thead>
+    <tbody>
+      {{range .Items}}
+      <tr>
+        <td><a href="/containers/{{.ID}}">{{.Names}}</a><br><small class="muted">{{.ID}}</small></td>
+        <td>{{.Image}}</td>
+        <td><span class="badge {{stateClass .State}}">{{.State}}</span><br><small class="muted">{{.Status}}</small></td>
+        <td><small>{{.Ports}}</small></td>
+        <td class="right nowrap">
+          {{if not $.ReadOnly}}
+          <form method="post" action="/containers/{{.ID}}/action" class="inline">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button name="action" value="start" class="mini">启动</button>
+            <button name="action" value="stop" class="mini">停止</button>
+            <button name="action" value="restart" class="mini">重启</button>
+          </form>
+          {{end}}
+          <a class="mini btn" href="/containers/{{.ID}}">详情</a>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+    <p class="muted">没有容器。</p>
+  {{end}}
+</section>
+
+{{if not .ReadOnly}}
+<section class="card danger-zone">
+  <h3>危险操作</h3>
+  <p class="muted">清理未使用的镜像、容器、网络与构建缓存。此操作不可撤销。</p>
+  <form method="post" action="/containers/prune" class="row" data-confirm="确认执行 docker system prune？">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="text" name="confirm" placeholder="输入 PRUNE 确认" autocomplete="off">
+    <button class="danger" type="submit">执行清理</button>
+  </form>
+</section>
+{{end}}
+{{end}}

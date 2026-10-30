@@ -1,0 +1,58 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · ZyPanel</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+</head>
+<body>
+{{if .User}}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">Z</span>
+      <div>
+        <strong>ZyPanel</strong>
+        <small>{{.Version}}</small>
+      </div>
+    </div>
+    <nav>
+      <a href="/" class="{{if eq .Path "/"}}active{{end}}">仪表盘</a>
+      {{if .Docker}}<a href="/containers" class="{{if hasPrefix .Path "/containers"}}active{{end}}">容器</a>{{end}}
+      {{if .Systemd}}<a href="/services" class="{{if eq .Path "/services"}}active{{end}}">服务</a>{{end}}
+      {{if .CF}}<a href="/cloudflared" class="{{if eq .Path "/cloudflared"}}active{{end}}">隧道</a>{{end}}
+      {{if .OpenClaw}}<a href="/openclaw" class="{{if eq .Path "/openclaw"}}active{{end}}">OpenClaw</a>{{end}}
+      <a href="/ports" class="{{if eq .Path "/ports"}}active{{end}}">端口</a>
+      <a href="/audit" class="{{if eq .Path "/audit"}}active{{end}}">审计</a>
+      <a href="/settings" class="{{if eq .Path "/settings"}}active{{end}}">设置</a>
+    </nav>
+    <div class="sidebar-foot">
+      {{if .ReadOnly}}<span class="badge warn">只读模式</span>{{end}}
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="link" type="submit">退出登录</button>
+      </form>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <h1>{{.Title}}</h1>
+      <div class="topbar-right">
+        <button id="theme-toggle" class="ghost" type="button" title="切换主题">◐</button>
+        <span class="user">{{.User}}</span>
+      </div>
+    </header>
+    {{if .Flash}}<div class="flash {{.FlashKind}}">{{.Flash}}</div>{{end}}
+    {{template "content" .}}
+  </main>
+</div>
+{{else}}
+<main class="auth-wrap">
+  {{template "content" .}}
+</main>
+{{end}}
+<script src="/static/app.js"></script>
+</body>
+</html>{{end}}

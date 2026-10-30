@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="card">
+  <div class="card-head">
+    <h3>监听端口 <span class="muted">({{len .Items}})</span></h3>
+  </div>
+  {{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+  {{if .Items}}
+  <table>
+    <thead><tr><th>协议</th><th>地址</th><th>端口</th><th>进程</th></tr></thead>
+    <tbody>
+      {{range .Items}}
+      <tr>
+        <td>{{.Proto}}</td>
+        <td><code>{{.Address}}</code></td>
+        <td><strong>{{.Port}}</strong></td>
+        <td><small class="muted">{{.Process}}</small></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+    <p class="muted">没有读取到监听端口。</p>
+  {{end}}
+</section>
+{{end}}

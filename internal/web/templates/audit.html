@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="card">
+  <div class="card-head">
+    <h3>操作审计 <span class="muted">({{len .Entries}})</span></h3>
+  </div>
+  {{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+  {{if .Entries}}
+  <table>
+    <thead><tr><th>时间</th><th>用户</th><th>来源</th><th>动作</th><th>目标</th><th>结果</th></tr></thead>
+    <tbody>
+      {{range .Entries}}
+      <tr>
+        <td><small class="muted">{{.TS}}</small></td>
+        <td>{{.User}}</td>
+        <td><small class="muted">{{.IP}}</small></td>
+        <td><code>{{.Action}}</code></td>
+        <td><small>{{.Target}}</small></td>
+        <td>{{if .OK}}<span class="badge ok">成功</span>{{else}}<span class="badge bad">失败</span>{{end}}
+          {{if .Detail}}<br><small class="muted">{{.Detail}}</small>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+    <p class="muted">还没有审计记录。</p>
+  {{end}}
+</section>
+{{end}}

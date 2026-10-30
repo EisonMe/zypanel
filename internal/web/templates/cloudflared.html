@@ -1,0 +1,67 @@
+{{define "content"}}
+{{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+
+{{if .Available}}
+<section class="card">
+  <div class="card-head">
+    <h3>隧道</h3>
+    <span class="badge">{{.Tunnel}}</span>
+  </div>
+  <p class="muted">配置文件：<code>{{.ConfigPath}}</code></p>
+  <table>
+    <thead><tr><th>域名</th><th>后端</th><th class="right">操作</th></tr></thead>
+    <tbody>
+      {{range .Rules}}
+      <tr>
+        <td>{{if .Hostname}}{{.Hostname}}{{else}}<em class="muted">（兜底）</em>{{end}}</td>
+        <td><code>{{.Service}}</code></td>
+        <td class="right">
+          {{if and .Hostname (not $.ReadOnly)}}
+          <form method="post" action="/cloudflared/remove" class="inline" data-confirm="确认删除 {{.Hostname}} 的路由？">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <input type="hidden" name="hostname" value="{{.Hostname}}">
+            <button class="mini danger" type="submit">删除</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+{{if not .ReadOnly}}
+<section class="grid two">
+  <div class="card">
+    <h3>新增路由</h3>
+    <form method="post" action="/cloudflared/add" class="stack">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <label>域名 <input type="text" name="hostname" placeholder="app.example.com" required></label>
+      <label>后端地址 <input type="text" name="service" placeholder="http://127.0.0.1:8080" required></label>
+      <button class="primary" type="submit">写入配置并重启</button>
+    </form>
+    <p class="muted small">写入前会自动备份原配置；如校验失败会自动回滚。</p>
+  </div>
+
+  <div class="card">
+    <h3>重启隧道</h3>
+    <form method="post" action="/cloudflared/restart" data-confirm="确认重启 cloudflared？">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="btn" type="submit">重启 cloudflared.service</button>
+    </form>
+  </div>
+</section>
+{{end}}
+
+<section class="card">
+  <details>
+    <summary>当前配置原文</summary>
+    <pre class="scroll tall">{{.RawConfig}}</pre>
+  </details>
+</section>
+{{else}}
+<section class="card">
+  <p class="muted">隧道管理未启用。设置 <code>ZYPANEL_CLOUDFLARED=1</code> 并挂载配置目录后可用。</p>
+</section>
+{{end}}
+{{end}}

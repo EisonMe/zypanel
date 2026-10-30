@@ -1,0 +1,20 @@
+{{define "content"}}
+{{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+
+{{if .Available}}
+<section class="card">
+  <h3>openclaw status</h3>
+  <pre class="scroll tall">{{if .Status}}{{.Status}}{{else}}（无输出）{{end}}</pre>
+</section>
+
+<section class="card">
+  <h3>agents</h3>
+  <pre class="scroll">{{if .Agents}}{{.Agents}}{{else}}（无输出）{{end}}</pre>
+</section>
+{{else}}
+<section class="card">
+  <p class="muted">未启用。设置 <code>ZYPANEL_OPENCLAW=1</code> 并在镜像内提供 <code>openclaw</code> 可执行文件后可用。</p>
+  <p class="muted small">提示：直接让容器读取宿主机 OpenClaw 数据库会有锁竞争风险，建议只挂载只读配置或改用独立实例。</p>
+</section>
+{{end}}
+{{end}}

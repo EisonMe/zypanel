@@ -1,0 +1,22 @@
+# binaries
+/zypanel
+/dist/
+*.exe
+*.test
+*.out
+
+# local env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# runtime data
+/data/
+/logs/
+*.jsonl
+
+# editor
+.idea/
+.vscode/
+.DS_Store

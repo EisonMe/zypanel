@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: gofmt
+        run: |
+          out=$(gofmt -l . || true)
+          if [ -n "$out" ]; then
+            echo "These files are not gofmt-ed:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: build
+        run: |
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X github.com/EisonMe/zypanel/internal/version.Version=ci" \
+            -o /tmp/zypanel ./cmd/zypanel
+
+      - name: test
+        run: go test ./...
+
+  dockerfile:
+    name: dockerfile
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: zypanel:ci
+          build-args: |
+            VERSION=ci
+            COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,62 @@
+{{define "content"}}
+{{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+
+<section class="grid two">
+  <div class="card">
+    <h3>{{.Name}}</h3>
+    <dl>
+      <dt>引用</dt><dd><code>{{.Ref}}</code></dd>
+      <dt>镜像</dt><dd>{{.Image}}</dd>
+      <dt>状态</dt><dd><span class="badge {{stateClass .State}}">{{.State}}</span></dd>
+      <dt>启动命令</dt><dd><code>{{.Status}}</code></dd>
+      <dt>创建时间</dt><dd>{{.Created}}</dd>
+      <dt>网络</dt><dd>{{.Networks}}</dd>
+    </dl>
+    {{if not .ReadOnly}}
+    <div class="row">
+      <form method="post" action="/containers/{{.Ref}}/action" class="inline">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button name="action" value="start" class="mini">启动</button>
+        <button name="action" value="stop" class="mini">停止</button>
+        <button name="action" value="restart" class="mini">重启</button>
+      </form>
+    </div>
+    {{end}}
+  </div>
+
+  <div class="card">
+    <h3>端口映射</h3>
+    <pre class="scroll">{{if .Ports}}{{.Ports}}{{else}}无{{end}}</pre>
+    <h3>挂载</h3>
+    <pre class="scroll">{{if .Mounts}}{{.Mounts}}{{else}}无{{end}}</pre>
+  </div>
+</section>
+
+<section class="card">
+  <h3>日志（最近 100 行）</h3>
+  <pre class="scroll tall">{{.Logs}}</pre>
+  <div class="row">
+    <a class="btn" href="/containers/{{.Ref}}/logs?tail=500" target="_blank" rel="noopener">查看 500 行</a>
+  </div>
+</section>
+
+<section class="card">
+  <details>
+    <summary>docker inspect 原文</summary>
+    <pre class="scroll tall">{{.Inspect}}</pre>
+  </details>
+</section>
+
+{{if not .ReadOnly}}
+<section class="card danger-zone">
+  <h3>删除容器</h3>
+  <p class="muted">此操作不可撤销。输入 DELETE 确认。</p>
+  <form method="post" action="/containers/{{.Ref}}/delete" class="row" data-confirm="确认删除容器 {{.Name}}？">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="text" name="confirm" placeholder="DELETE" autocomplete="off">
+    <label class="checkbox"><input type="checkbox" name="force" value="1"> 强制删除</label>
+    <button class="danger" type="submit">删除</button>
+  </form>
+</section>
+{{end}}
+{{end}}

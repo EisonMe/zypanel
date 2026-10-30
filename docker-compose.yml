@@ -1,0 +1,38 @@
+services:
+  zypanel:
+    image: ghcr.io/eisonme/zypanel:latest
+    # For a local build instead of the published image:
+    # build:
+    #   context: .
+    #   args:
+    #     VERSION: local
+    container_name: zypanel
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      # Bind to loopback so only the local tunnel / reverse proxy can reach it.
+      - "127.0.0.1:8090:8090"
+    volumes:
+      # Docker control (read-write: needed for start/stop/restart/remove).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent data: audit log + favourites.
+      - ./data:/data
+      # Optional: tunnel configuration editing.
+      # - /etc/cloudflared:/etc/cloudflared
+    # Optional: only needed when enabling ZYPANEL_SYSTEMD=1.
+    # pid: host
+    # privileged: true
+    # volumes:
+    #   - /run:/run
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8090/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

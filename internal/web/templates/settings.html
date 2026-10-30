@@ -1,0 +1,26 @@
+{{define "content"}}
+<section class="card">
+  <h3>运行信息</h3>
+  <dl class="wide">
+    <dt>版本</dt><dd>{{.Version}}</dd>
+    <dt>监听地址</dt><dd><code>{{.Addr}}</code></dd>
+    <dt>主机名</dt><dd>{{.Hostname}}</dd>
+    <dt>Go</dt><dd>{{.GoVersion}}</dd>
+    <dt>数据目录</dt><dd><code>{{.DataDir}}</code></dd>
+    <dt>审计日志</dt><dd><code>{{.AuditLog}}</code></dd>
+    <dt>Cookie Secure</dt><dd>{{if .CookieSecure}}是{{else}}否{{end}}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h3>功能开关</h3>
+  <dl class="wide">
+    <dt>Docker</dt><dd>{{if .Docker}}<span class="badge ok">启用</span>{{else}}<span class="badge">关闭</span>{{end}} <code>{{.DockerBin}}</code></dd>
+    <dt>systemd</dt><dd>{{if .Systemd}}<span class="badge ok">启用</span>{{else}}<span class="badge">关闭</span>{{end}} <code>{{.SystemctlBin}}</code></dd>
+    <dt>cloudflared</dt><dd>{{if .CF}}<span class="badge ok">启用</span>{{else}}<span class="badge">关闭</span>{{end}} <code>{{.CloudflaredConfig}}</code></dd>
+    <dt>OpenClaw</dt><dd>{{if .OpenClaw}}<span class="badge ok">启用</span>{{else}}<span class="badge">关闭</span>{{end}} <code>{{.OpenClawBin}}</code></dd>
+    <dt>只读</dt><dd>{{if .ReadOnly}}<span class="badge warn">是</span>{{else}}否{{end}}</dd>
+  </dl>
+  <p class="muted small">这些开关由环境变量控制，修改后需重启容器。</p>
+</section>
+{{end}}

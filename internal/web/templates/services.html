@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="card">
+  <div class="card-head">
+    <h3>系统服务 <span class="muted">({{len .Items}})</span></h3>
+  </div>
+  {{if .Error}}<div class="flash err">{{.Error}}</div>{{end}}
+  {{if .Items}}
+  <table>
+    <thead><tr><th>服务</th><th>状态</th><th>开机</th><th>描述</th><th class="right">操作</th></tr></thead>
+    <tbody>
+      {{range .Items}}
+      <tr>
+        <td><code>{{.Unit}}</code></td>
+        <td><span class="badge {{stateClass .Active}}">{{.Active}}</span> <small class="muted">{{.Sub}}</small></td>
+        <td><small class="muted">{{.Enabled}}</small></td>
+        <td><small>{{.Description}}</small></td>
+        <td class="right nowrap">
+          {{if not $.ReadOnly}}
+          <form method="post" action="/services/action" class="inline">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <input type="hidden" name="unit" value="{{.Unit}}">
+            <button name="action" value="restart" class="mini">重启</button>
+            <button name="action" value="start" class="mini">启动</button>
+            <button name="action" value="stop" class="mini">停止</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="muted">未启用或没有服务数据。</p>
+  {{end}}
+</section>
+{{end}}

@@ -1,0 +1,59 @@
+{{define "content"}}
+<section class="grid cards">
+  <div class="card">
+    <h3>主机</h3>
+    <dl>
+      <dt>主机名</dt><dd>{{.Stats.Hostname}}</dd>
+      <dt>运行时长</dt><dd>{{.Stats.Uptime}}</dd>
+      <dt>负载</dt><dd>{{.Stats.Load}}</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>内存</h3>
+    <div class="meter"><span style="width: {{.Stats.MemPct}}%"></span></div>
+    <p class="big">{{.Stats.MemPct}}%</p>
+    <p class="muted">{{.Stats.MemUsed}} / {{.Stats.MemTotal}}</p>
+  </div>
+
+  <div class="card">
+    <h3>磁盘 /</h3>
+    {{if .DiskOK}}
+    <div class="meter"><span style="width: {{.Stats.DiskPct}}%"></span></div>
+    <p class="big">{{.Stats.DiskPct}}%</p>
+    <p class="muted">{{.Stats.DiskUsed}} / {{.Stats.DiskTotal}}</p>
+    {{else}}
+    <p class="muted">不可用</p>
+    {{end}}
+  </div>
+
+  {{if .Docker}}
+  <div class="card">
+    <h3>容器</h3>
+    <p class="big">{{.Running}}<span class="muted"> / {{.Containers}}</span></p>
+    <p class="muted">运行中 / 总数</p>
+    {{if .DockerErr}}<p class="err-text">{{.DockerErr}}</p>{{end}}
+  </div>
+  {{end}}
+
+  {{if .Systemd}}
+  <div class="card">
+    <h3>服务</h3>
+    <p class="big">{{.Services}}<span class="muted"> 运行中</span></p>
+    {{if .Failed}}<p class="err-text">{{.Failed}} 个失败</p>{{end}}
+    {{if .SystemdErr}}<p class="err-text">{{.SystemdErr}}</p>{{end}}
+  </div>
+  {{end}}
+</section>
+
+<section class="card">
+  <h3>快捷入口</h3>
+  <div class="row">
+    {{if .Docker}}<a class="btn" href="/containers">容器列表</a>{{end}}
+    {{if .Systemd}}<a class="btn" href="/services">系统服务</a>{{end}}
+    {{if .CF}}<a class="btn" href="/cloudflared">隧道配置</a>{{end}}
+    <a class="btn" href="/ports">端口占用</a>
+    <a class="btn" href="/audit">操作审计</a>
+  </div>
+</section>
+{{end}}

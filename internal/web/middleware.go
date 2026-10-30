@@ -37,6 +37,15 @@ type Server struct {
 	CloudflaredConfig string
 	OpenClawBin       string
 
+	CloudflaredSuffixAllowlist []string
+
+	// Display-only settings surfaced on the settings page.
+	Addr         string
+	DataDir      string
+	AuditLog     string
+	CookieSecure bool
+	GoVersion    string
+
 	Audit   *audit.Logger
 	Version string
 }

@@ -86,11 +86,12 @@ openssl rand -hex 32
 
 ```yaml
     pid: host
+    privileged: true
     volumes:
-      - /run:/run
+      - /run:/run:ro
 ```
 
-开启后容器能控制宿主机服务，请自行评估风险；不需要就别开（默认关闭）。
+镜像里带了一个 `systemctl-host` 包装脚本，它用 `nsenter` 进入 PID 1 的命名空间执行宿主机上的 `systemctl`，所以不需要在镜像里再装一套 systemd。启用后容器对宿主机拥有接近 root 的权限，请自行评估风险；不需要就别开（默认关闭）。
 
 ### 需要编辑 cloudflared 配置时
 
@@ -99,7 +100,24 @@ openssl rand -hex 32
       - /etc/cloudflared:/etc/cloudflared
 ```
 
-面板会先写 `.bak.<timestamp>` 备份，再原子替换；如果 `cloudflared ingress validate` 不通过会自动回滚。
+面板会先写 `.bak.<timestamp>` 备份，再原子替换；如果 `cloudflared tunnel ingress validate` 不通过会自动回滚。
+
+两项都开启时可以直接用 [docker-compose.full.yml](docker-compose.full.yml)：
+
+```bash
+docker compose -f docker-compose.full.yml up -d
+```
+
+对应的 `.env`：
+
+```ini
+ZYPANEL_SYSTEMD=1
+ZYPANEL_CLOUDFLARED=1
+ZYPANEL_CLOUDFLARED_CONFIG=/etc/cloudflared/config.yml
+ZYPANEL_CLOUDFLARED_SUFFIX_ALLOWLIST=.example.com
+```
+
+`ZYPANEL_CLOUDFLARED_SUFFIX_ALLOWLIST` 建议一定设置，它限制面板只能新增这些域名后缀下的路由。
 
 ---
 

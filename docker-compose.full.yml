@@ -1,0 +1,37 @@
+# Full-power compose file: container management + host systemd + tunnel editing.
+#
+# This grants the container effective root on the host:
+#   * /var/run/docker.sock  -> full control of every container
+#   * pid: host + privileged -> nsenter into PID 1, i.e. host systemd
+#   * /etc/cloudflared       -> rewrite the tunnel ingress config
+#
+# Only run this on a host you administer, and keep the port bound to loopback.
+# For the minimal setup use docker-compose.yml instead.
+
+services:
+  zypanel:
+    image: ghcr.io/eisonme/zypanel:latest
+    container_name: zypanel
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8090:8090"
+    pid: host
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/data
+      - /run:/run:ro
+      - /etc/cloudflared:/etc/cloudflared
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8090/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

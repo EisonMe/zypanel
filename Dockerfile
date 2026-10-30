@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1
 
 # ---------------------------------------------------------------------------
+# Cloudflared binary (used for `tunnel ingress validate`)
+# ---------------------------------------------------------------------------
+FROM cloudflare/cloudflared:2026.10.6 AS cloudflared
+
+# ---------------------------------------------------------------------------
 # Build stage
 # ---------------------------------------------------------------------------
 FROM golang:1.24-alpine AS build
@@ -36,10 +41,15 @@ RUN apk add --no-cache ca-certificates tzdata docker-cli iproute2 curl \
 
 ENV TZ=Asia/Shanghai \
     ZYPANEL_ADDR=:8090 \
-    ZYPANEL_DATA_DIR=/data
+    ZYPANEL_DATA_DIR=/data \
+    ZYPANEL_SYSTEMCTL_BIN=systemctl-host
 
 WORKDIR /app
 COPY --from=build /out/zypanel /usr/local/bin/zypanel
+COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
+COPY docker/systemctl-host.sh /usr/local/bin/systemctl-host
+RUN chmod 0755 /usr/local/bin/systemctl-host /usr/local/bin/cloudflared \
+    && /usr/local/bin/cloudflared --version
 
 # The panel needs read access to the Docker socket when that feature is on.
 # The container therefore runs as root by default; switch to a dedicated user

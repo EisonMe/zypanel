@@ -86,6 +86,83 @@ func extractTunnelID(text string) string {
 	return ""
 }
 
+// removeIngressRule removes the ingress block whose hostname matches host.
+// Lines outside rule blocks (tunnel:, credentials-file:, protocol:, ingress:)
+// are preserved verbatim: only the matching rule block is dropped.
+func removeIngressRule(text, host string) (string, bool) {
+	lines := strings.Split(text, "\n")
+	out := make([]string, 0, len(lines))
+	removed := false
+
+	for i := 0; i < len(lines); {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+
+		if !strings.HasPrefix(trimmed, "- ") {
+			out = append(out, line)
+			i++
+			continue
+		}
+
+		// Collect the block: the dash line plus following indented lines.
+		block := []string{line}
+		j := i + 1
+		for j < len(lines) {
+			next := lines[j]
+			if strings.TrimSpace(next) == "" || !strings.HasPrefix(next, " ") {
+				break
+			}
+			block = append(block, next)
+			j++
+		}
+
+		if !removed {
+			if rules := parseRuleBlocks(strings.Join(block, "\n")); len(rules) > 0 && rules[0].Hostname == host {
+				removed = true
+				i = j
+				continue
+			}
+		}
+
+		out = append(out, block...)
+		i = j
+	}
+
+	return strings.Join(out, "\n"), removed
+}
+
+// restartAndVerify restarts cloudflared and waits for it to actually be active.
+// A restart that is immediately followed by a crash loop must not count as success.
+func (s *Server) restartAndVerify() (bool, string) {
+	if !s.SystemdEnabled {
+		return true, ""
+	}
+	res := execx.Run([]string{s.SystemctlBin, "restart", "cloudflared.service"}, 90*time.Second)
+	if !res.OK() {
+		return false, "restart failed: " + firstLine(res.Stderr, res.Err)
+	}
+	deadline := time.Now().Add(25 * time.Second)
+	for time.Now().Before(deadline) {
+		state := strings.TrimSpace(execx.Run([]string{s.SystemctlBin, "is-active", "cloudflared.service"}, 10*time.Second).Stdout)
+		if state == "active" {
+			return true, ""
+		}
+		if state == "failed" {
+			return false, "cloudflared failed to start"
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return false, "cloudflared did not become active"
+}
+
+// restoreIngress puts the previous config back and restarts the tunnel.
+func (s *Server) restoreIngress(previous string, mode os.FileMode) {
+	_ = atomicWrite(s.CloudflaredConfig, []byte(previous), mode)
+	if s.SystemdEnabled {
+		_ = execx.Run([]string{s.SystemctlBin, "restart", "cloudflared.service"}, 90*time.Second)
+	}
+}
+
 func (s *Server) handleCloudflared(w http.ResponseWriter, r *http.Request) {
 	page := cfPage{
 		BaseData:   withFlash(s.base(r, "Cloudflared"), r),
@@ -248,12 +325,10 @@ func (s *Server) handleCloudflaredAdd(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ok := true
-	if s.SystemdEnabled {
-		if res := execx.Run([]string{s.SystemctlBin, "restart", "cloudflared.service"}, 90*time.Second); !res.OK() {
-			ok = false
-			detail += "; restart failed: " + firstLine(res.Stderr, res.Err)
-		}
+	ok, restartDetail := s.restartAndVerify()
+	if !ok {
+		detail += "; " + restartDetail
+		s.restoreIngress(text, mode)
 	}
 	s.record(r, "cloudflared.add", host, ok, detail)
 	if ok {
@@ -276,46 +351,7 @@ func (s *Server) handleCloudflaredRemove(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	lines := strings.Split(text, "\n")
-	blocks := make([][]string, 0, 8)
-	current := make([]string, 0, 3)
-	for _, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "- ") && len(current) > 0 && strings.HasPrefix(strings.TrimSpace(current[0]), "- ") {
-			blocks = append(blocks, current)
-			current = []string{line}
-			continue
-		}
-		if len(current) == 0 && strings.HasPrefix(strings.TrimSpace(line), "- ") {
-			current = []string{line}
-			continue
-		}
-		if len(current) > 0 && strings.TrimSpace(line) == "" {
-			blocks = append(blocks, current)
-			blocks = append(blocks, []string{line})
-			current = []string{}
-			continue
-		}
-		if len(current) > 0 {
-			current = append(current, line)
-		}
-	}
-	if len(current) > 0 {
-		blocks = append(blocks, current)
-	}
-
-	removed := false
-	out := make([]string, 0, len(lines))
-	for _, block := range blocks {
-		joined := strings.Join(block, "\n")
-		if !removed && len(block) > 0 && strings.HasPrefix(strings.TrimSpace(block[0]), "- ") {
-			rule := parseRuleBlocks(joined)
-			if len(rule) > 0 && rule[0].Hostname == host {
-				removed = true
-				continue
-			}
-		}
-		out = append(out, block...)
-	}
+	out, removed := removeIngressRule(text, host)
 	if !removed {
 		http.Redirect(w, r, "/cloudflared?err=hostname-not-found", http.StatusSeeOther)
 		return
@@ -337,13 +373,11 @@ func (s *Server) handleCloudflaredRemove(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ok := true
-	detail := "removed"
-	if s.SystemdEnabled {
-		if res := execx.Run([]string{s.SystemctlBin, "restart", "cloudflared.service"}, 90*time.Second); !res.OK() {
-			ok = false
-			detail = "restart failed: " + firstLine(res.Stderr, res.Err)
-		}
+	ok, detail := s.restartAndVerify()
+	if ok {
+		detail = "removed"
+	} else {
+		s.restoreIngress(text, mode)
 	}
 	s.record(r, "cloudflared.remove", host, ok, detail)
 	if ok {
